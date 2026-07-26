@@ -1,0 +1,13 @@
+{
+  "name": "gemini-companion",
+  "owner": {
+    "name": "Gary Wong"
+  },
+  "plugins": [
+    {
+      "name": "gemini-companion",
+      "source": "./",
+      "description": "Use Gemini from Claude Code: delegate tasks, run reviews, generate images. API key stays in the environment."
+    }
+  ]
+}
