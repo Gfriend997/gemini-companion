@@ -1,6 +1,17 @@
 {
-  "description": "Optional stop-time Gemini review gate (off by default; toggle with /gemini-companion:setup --gate on).",
+  "description": "SessionStart routing policy injection; optional stop-time Gemini review gate (off by default; toggle with /gemini-companion:setup --gate on).",
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/print-routing-policy.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [

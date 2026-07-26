@@ -50,6 +50,10 @@ node --test "tests/*.test.mjs"
 
 Live end-to-end (uses your key, makes real API calls): run `setup`, a foreground `task`, `review`, a `--background` task plus `status`/`result`/`cancel`, and `image` via `scripts/gemini-companion.mjs`.
 
+## Routing policy
+
+A `SessionStart` hook injects `prompts/routing-policy.md` into Claude's context each session: raster image requests and quick diff second opinions auto-route to `imagine`/`review`; heavy work (rescue delegation, adversarial review, long-context analysis, background jobs) gets a one-line confirmation first. Edit that file to change routing behavior; restart the session to pick up changes.
+
 ## Architecture
 
 One Node entry script (`scripts/gemini-companion.mjs`), stdlib only. Per-job headless `gemini` spawns — no persistent broker (the Codex plugin's app-server protocol has no Gemini equivalent). Libraries: `gemini.mjs` (runner), `jobs.mjs` (state), `image.mjs` (REST), `scrub.mjs` (secret masking).
