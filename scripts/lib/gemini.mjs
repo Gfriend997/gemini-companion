@@ -12,6 +12,17 @@ export function geminiBinary() {
   return process.platform === "win32" ? "gemini.cmd" : "gemini";
 }
 
+// Windows .cmd shims cannot be spawned with shell:false directly (EINVAL since
+// the DEP0190-era hardening), so route through an explicit `cmd.exe /c`. This
+// keeps shell:false everywhere: Node escapes argv, no word splitting, and no
+// deprecation warning.
+export function spawnSpec(args) {
+  if (process.platform === "win32") {
+    return { cmd: "cmd.exe", args: ["/c", geminiBinary(), ...args] };
+  }
+  return { cmd: geminiBinary(), args };
+}
+
 export function geminiAvailable() {
   const probe = process.platform === "win32" ? "where" : "which";
   return spawnSync(probe, ["gemini"], { stdio: "ignore" }).status === 0;
@@ -20,10 +31,21 @@ export function geminiAvailable() {
 let resumeSupport = null;
 export function supportsResume() {
   if (resumeSupport === null) {
-    const help = spawnSync(geminiBinary(), ["--help"], { encoding: "utf8", shell: true });
+    const spec = spawnSpec(["--help"]);
+    const help = spawnSync(spec.cmd, spec.args, { encoding: "utf8" });
     resumeSupport = (help.stdout || "").includes("--resume");
   }
   return resumeSupport;
+}
+
+// child.kill() only reaches the direct child (cmd.exe on Windows); the real
+// gemini process underneath would survive a timeout as an orphan. Kill the tree.
+export function killTree(pid) {
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/PID", String(pid), "/T", "/F"], { stdio: "ignore" });
+  } else {
+    try { process.kill(pid, "SIGTERM"); } catch { /* already gone */ }
+  }
 }
 
 export function buildArgs({ model, write, resume } = {}) {
@@ -54,13 +76,12 @@ export function parseGeminiOutput(stdout) {
 export function runGemini({ prompt, cwd, model, write, resume, timeoutMs = DEFAULT_TIMEOUT_MS, onSpawn }) {
   const args = buildArgs({ model, write, resume });
   return new Promise((resolve) => {
-    // Single command string: every token is a fixed flag or regex-validated,
-    // so no shell quoting is needed (and the prompt itself goes over stdin).
+    // Prompt goes over stdin (argv is visible in the process list).
     // GEMINI_CLI_TRUST_WORKSPACE: headless runs refuse untrusted dirs; the user
     // explicitly pointed the plugin at this repo, which is the trust decision.
-    const child = spawn(`${geminiBinary()} ${args.join(" ")}`, {
+    const spec = spawnSpec(args);
+    const child = spawn(spec.cmd, spec.args, {
       cwd: cwd || process.cwd(),
-      shell: true,
       stdio: ["pipe", "pipe", "pipe"],
       env: { ...process.env, GEMINI_CLI_TRUST_WORKSPACE: "true" }
     });
@@ -70,7 +91,7 @@ export function runGemini({ prompt, cwd, model, write, resume, timeoutMs = DEFAU
     child.stdout.on("data", (d) => (stdout += d));
     child.stderr.on("data", (d) => (stderr += d));
     const timer = setTimeout(() => {
-      child.kill();
+      killTree(child.pid);
       resolve({ ok: false, text: "", stats: null, error: `gemini timed out after ${timeoutMs / 60000} min` });
     }, timeoutMs);
     child.on("error", (err) => {
