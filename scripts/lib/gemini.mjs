@@ -54,11 +54,15 @@ export function parseGeminiOutput(stdout) {
 export function runGemini({ prompt, cwd, model, write, resume, timeoutMs = DEFAULT_TIMEOUT_MS, onSpawn }) {
   const args = buildArgs({ model, write, resume });
   return new Promise((resolve) => {
-    const child = spawn(geminiBinary(), args, {
+    // Single command string: every token is a fixed flag or regex-validated,
+    // so no shell quoting is needed (and the prompt itself goes over stdin).
+    // GEMINI_CLI_TRUST_WORKSPACE: headless runs refuse untrusted dirs; the user
+    // explicitly pointed the plugin at this repo, which is the trust decision.
+    const child = spawn(`${geminiBinary()} ${args.join(" ")}`, {
       cwd: cwd || process.cwd(),
       shell: true,
       stdio: ["pipe", "pipe", "pipe"],
-      env: process.env
+      env: { ...process.env, GEMINI_CLI_TRUST_WORKSPACE: "true" }
     });
     if (onSpawn) onSpawn(child.pid);
     let stdout = "";
