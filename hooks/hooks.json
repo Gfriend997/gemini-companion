@@ -1,0 +1,16 @@
+{
+  "description": "Optional stop-time Gemini review gate (off by default; toggle with /gemini-companion:setup --gate on).",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/stop-review-gate-hook.mjs\"",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
