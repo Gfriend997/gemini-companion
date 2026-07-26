@@ -4,5 +4,9 @@
   "description": "Use Gemini from Claude Code: delegate tasks, run reviews, generate images. API key stays in the environment.",
   "author": {
     "name": "Gary Wong"
-  }
+  },
+  "homepage": "https://github.com/Gfriend997/gemini-companion",
+  "repository": "https://github.com/Gfriend997/gemini-companion",
+  "license": "MIT",
+  "keywords": ["gemini", "claude-code", "plugin", "code-review", "image-generation", "delegation"]
 }

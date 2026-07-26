@@ -6,18 +6,32 @@ Claude Code plugin that delegates work to Google Gemini: task rescue, code revie
 
 - Node.js 18+
 - Gemini CLI: `npm install -g @google/gemini-cli`
-- `GEMINI_API_KEY` set as a **Windows user environment variable** (System Properties → Environment Variables). Never put it in a `.env` file or any file in a repo.
+- `GEMINI_API_KEY` set as an **OS-level environment variable** — Windows: user environment variable (System Properties → Environment Variables); macOS/Linux: your shell profile. Never put it in a `.env` file or any file in a repo.
+
+Developed and tested on Windows. macOS/Linux code paths exist but are untested — reports welcome.
 
 ## Install
 
-Add this repo as a local plugin, e.g. in Claude Code:
+In Claude Code:
 
 ```
-/plugin marketplace add <path-or-repo>
+/plugin marketplace add Gfriend997/gemini-companion
 /plugin install gemini-companion
 ```
 
-Then verify: `/gemini-companion:setup`
+Then verify the CLI and key are visible:
+
+```
+/gemini-companion:setup
+```
+
+## Quick start
+
+```
+/gemini-companion:imagine --out fox.png a watercolor fox
+/gemini-companion:review                       # Gemini reviews your working diff
+/gemini-companion:rescue why does tests/jobs.test.mjs flake on CI?
+```
 
 ## Commands
 
@@ -38,7 +52,7 @@ Then verify: `/gemini-companion:setup`
 - **The API key never touches disk.** Text/agentic runs spawn the `gemini` CLI, which reads `GEMINI_API_KEY` from the inherited environment; plugin code never reads it for those paths. Image generation reads it from `process.env` at call time and sends it only as an `x-goog-api-key` header — never a query parameter, never argv, never logged.
 - Prompts travel to the CLI over stdin, not argv (argv is visible in the process list).
 - Everything written to job state or logs passes a scrubber (`AIza…` pattern, labeled tokens, and the live env key value).
-- Job state lives in `%LOCALAPPDATA%\gemini-companion\`, outside any repo.
+- Job state lives outside any repo: `%LOCALAPPDATA%\gemini-companion\` on Windows, `~/.local/share/gemini-companion/` elsewhere.
 - Gemini output is treated as untrusted: commands relay it verbatim and never auto-execute its suggestions.
 - Headless runs set `GEMINI_CLI_TRUST_WORKSPACE=true` for the repo you invoked them in — invoking the command on your repo is the trust decision. `--write` runs use yolo approval; without it, tool calls needing approval fail closed.
 
