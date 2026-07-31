@@ -51,7 +51,11 @@ function cmdSetup(args) {
   const cliOk = geminiAvailable();
   const keyOk = Boolean(process.env.GEMINI_API_KEY);
   out(`gemini CLI: ${cliOk ? "found" : "NOT FOUND — run: npm install -g @google/gemini-cli"}`);
-  out(`GEMINI_API_KEY: ${keyOk ? "present in environment (value not shown)" : "NOT SET — add it as a Windows user environment variable, never a .env file"}`);
+  out(
+    `GEMINI_API_KEY: ${keyOk
+      ? "present in environment (value not shown)"
+      : "NOT VISIBLE — set it as an OS-level environment variable and restart Claude Code, never a .env file"}`
+  );
   if (values.gate) {
     if (!["on", "off"].includes(values.gate)) fail("--gate must be on or off");
     const cfg = writeConfig({ stopReviewGate: values.gate === "on" });

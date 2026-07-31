@@ -7,9 +7,17 @@ Claude Code plugin that delegates work to Google Gemini: task rescue, code revie
 - Node.js 18+
 - Gemini CLI: `npm install -g @google/gemini-cli`
 - A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
-- That key set as an **OS-level environment variable** named `GEMINI_API_KEY`. Never a `.env` file, never any file in a repo.
+- That key exported as an **OS-level environment variable** named `GEMINI_API_KEY`
 
-Set the key, then **restart Claude Code** so the new value is inherited by the plugin's processes:
+> **Export the key into your environment. Never put it in a `.env` file.**
+>
+> This plugin does not read `.env` files and never will. A `.env` sitting in a working
+> directory is one forgotten `.gitignore` line away from being committed, and once a key is in
+> git history, rotating it is the only real fix. Environment variables leave nothing behind in
+> the repo. Same rule for any config file, shell script, or command you type with the key
+> inline — the key belongs in your environment, not in your project.
+
+Export the key, then **restart Claude Code** so the new value is inherited by the plugin's processes:
 
 ```powershell
 # Windows (PowerShell) — persists for your user account

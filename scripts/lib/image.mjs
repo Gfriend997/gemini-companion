@@ -22,7 +22,11 @@ export function parseImageResponse(body) {
 
 export async function generateImage({ prompt, model = DEFAULT_IMAGE_MODEL, out }) {
   const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error("GEMINI_API_KEY not set in environment");
+  if (!key) {
+    throw new Error(
+      "GEMINI_API_KEY not set in the environment. Export it as an OS-level environment variable and restart Claude Code — never a .env file."
+    );
+  }
   if (!MODEL_RE.test(model)) throw new Error(`invalid model name: ${model}`);
 
   const res = await fetch(`${API_BASE}/models/${model}:generateContent`, {
