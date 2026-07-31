@@ -1,5 +1,8 @@
 gemini-companion
 
 Structure and command surface inspired by the OpenAI Codex plugin for
-Claude Code (Apache License 2.0, Copyright OpenAI). No source code was
-copied; the runtime was written fresh for the Gemini CLI and Gemini API.
+Claude Code, https://github.com/openai/codex-plugin-cc (Apache License 2.0,
+Copyright OpenAI). No source code was copied; the runtime was written fresh
+for the Gemini CLI and Gemini API.
+
+Not affiliated with or endorsed by OpenAI or Google.

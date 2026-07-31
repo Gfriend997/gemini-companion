@@ -1,6 +1,8 @@
 # gemini-companion
 
-Claude Code plugin that delegates work to Google Gemini: task rescue, code review, adversarial review, background jobs, and image generation. Modeled on the OpenAI Codex plugin's command surface, rebuilt for the Gemini CLI and Gemini API.
+Claude Code plugin that delegates work to Google Gemini: task rescue, code review, adversarial review, background jobs, and image generation.
+
+The idea is not original. It is OpenAI's [codex-plugin-cc](https://github.com/openai/codex-plugin-cc), which established the pattern of driving a second model from inside Claude Code and set the command surface this plugin follows. See [Credits](#credits).
 
 ## Requirements
 
@@ -120,6 +122,14 @@ A `SessionStart` hook injects `prompts/routing-policy.md` into Claude's context 
 ## Architecture
 
 One Node entry script (`scripts/gemini-companion.mjs`), stdlib only. Per-job headless `gemini` spawns — no persistent broker (the Codex plugin's app-server protocol has no Gemini equivalent). Libraries: `gemini.mjs` (runner), `jobs.mjs` (state), `image.mjs` (REST), `scrub.mjs` (secret masking).
+
+## Credits
+
+Original idea and command surface: **[openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc)** (Apache License 2.0, Copyright OpenAI). That plugin worked out the pattern this one copies — slash commands for delegate/review/status/result/cancel, background jobs with an id you poll, and a companion model that returns text for a human to act on rather than editing your files behind your back. The design decisions worth having were theirs first.
+
+No source code was copied. The runtime here was written fresh against the Gemini CLI and the Gemini image API, and the two plugins do not share a codebase. This plugin is MIT licensed and is not affiliated with or endorsed by OpenAI or Google.
+
+Sibling plugin: [kimi-companion](https://github.com/Gfriend997/kimi-companion), same pattern for Moonshot's Kimi models.
 
 ## Known limitations
 
