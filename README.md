@@ -81,14 +81,25 @@ Then verify the CLI and key are visible:
 
 Long jobs: add `--background` to `rescue`, then poll with `/gemini-companion:status`, collect with `/gemini-companion:result --id <job-id>`, abandon with `/gemini-companion:cancel --id <job-id>`.
 
-## Models
+## Models, cost, capability
 
-| Path | Model | Notes |
-|---|---|---|
-| `rescue`, `review`, `adversarial-review`, `transfer` | your Gemini CLI default | `--model` overrides per run |
-| `imagine` | `gemini-2.5-flash-image` | `--model` overrides per run |
+Text and review runs spawn the Gemini CLI, which owns model routing. `--model` passes
+through, but the CLI **silently substitutes** a model it knows when handed one it does
+not — no error, the run just executes on the fallback (verified on CLI 0.55.1:
+`-m gemini-3.7-flash` served `gemini-3.5-flash`). `imagine` hits the REST API directly
+and can reach any served model. Prices are standard-tier USD per 1M tokens unless noted
+([official pricing](https://ai.google.dev/gemini-api/docs/pricing)).
 
-Unlike the [grok-companion](https://github.com/Gfriend997/grok-companion) siblings, this
+| Job | Model | Cost | Capability |
+|---|---|---|---|
+| `rescue`, `review`, `adversarial-review`, `transfer` | Gemini CLI default (currently `gemini-3.5-flash`) | $1.50 in / $9.00 out; free tier | Agentic CLI run with tool use; `--write` lets it edit files |
+| CLI internal utility routing | `gemini-3.1-flash-lite` | $0.25 in / $1.50 out; free tier | Prompt classification and routing, picked by the CLI itself |
+| `imagine` (default) | `gemini-2.5-flash-image` | $0.039 per image; no free tier | Fast image generation and editing, up to 1024x1024 |
+| `imagine --model gemini-3-pro-image` | Nano Banana Pro (GA) | $0.134 per 1K/2K image, $0.24 per 4K; no free tier | Highest-quality image generation |
+| not reachable yet | `gemini-3.7-flash` | $0.75 in / $3.75 out through 2026 (doubles Jan 2027); free tier | GA 2026-08-13, best coding/agentic Flash at half the 3.5-flash price. REST serves it; Gemini CLI through 0.55.1 does not, so text jobs cannot use it until Google ships CLI support |
+| out of scope | `gemini-omni-flash-preview` | ~$0.10 per second of video; no free tier | Conversational video generation/editing. Not in this plugin; video routes to [grok-companion](https://github.com/Gfriend997/grok-companion) |
+
+Unlike the [grok-companion](https://github.com/Gfriend997/grok-companion) sibling, this
 plugin does not pick models per job type — text and review runs go through the Gemini CLI,
 which owns the default.
 
