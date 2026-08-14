@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Single entry point for the gemini-companion plugin.
-// Subcommands: setup | task | task-worker | review | status | result | cancel | image
+// Subcommands: setup | task | task-worker | review | status | result | cancel | ask | image
 // Security invariant: GEMINI_API_KEY is only ever read from process.env by the
 // image module and by the gemini CLI itself. This script never prints, stores,
 // or forwards the key value anywhere.
@@ -13,7 +13,8 @@ import { parseArgs } from "node:util";
 
 import { geminiAvailable, runGemini } from "./lib/gemini.mjs";
 import { companionHome, createJob, readJob, updateJob, listJobs, cancelJob } from "./lib/jobs.mjs";
-import { generateImage, DEFAULT_IMAGE_MODEL } from "./lib/image.mjs";
+import { generateImage, resolveImageModel } from "./lib/image.mjs";
+import { askGemini, DEFAULT_ASK_MODEL } from "./lib/ask.mjs";
 import { scrub } from "./lib/scrub.mjs";
 
 const SELF = fileURLToPath(import.meta.url);
@@ -116,9 +117,20 @@ async function cmdTask(args) {
     timeoutMs,
     onSpawn: (pid) => updateJob(job.id, { pid })
   });
-  updateJob(job.id, { status: res.ok ? "done" : "failed", resultText: res.text, error: res.error });
-  if (!res.ok) fail(`Gemini job ${job.id} failed: ${res.error}\n${res.text}`);
+  updateJob(job.id, {
+    status: res.ok ? "done" : "failed",
+    resultText: res.text,
+    servedModels: res.servedModels,
+    stats: res.stats,
+    summary: res.summary,
+    error: res.error
+  });
+  if (!res.ok) {
+    out(res.summary);
+    fail(`Gemini job ${job.id} failed: ${res.error}\n${res.text}`);
+  }
   out(`[gemini job ${job.id} done]\n\n${res.text}`);
+  out(res.summary);
 }
 
 async function cmdTaskWorker(args) {
@@ -134,7 +146,15 @@ async function cmdTaskWorker(args) {
     resume: job.resume,
     onSpawn: (pid) => updateJob(id, { geminiPid: pid })
   });
-  updateJob(id, { status: res.ok ? "done" : "failed", resultText: res.text, error: res.error });
+  updateJob(id, {
+    status: res.ok ? "done" : "failed",
+    resultText: res.text,
+    servedModels: res.servedModels,
+    stats: res.stats,
+    summary: res.summary,
+    error: res.error
+  });
+  out(res.summary);
 }
 
 // ---- review ---------------------------------------------------------------
@@ -166,8 +186,12 @@ async function cmdReview(args) {
   );
   const prompt = `${template}\n\n## Diff under review\n\n\`\`\`diff\n${gitDiff(values.base)}\n\`\`\`\n`;
   const res = await runGemini({ prompt, cwd: process.cwd(), model: values.model, write: false });
-  if (!res.ok) fail(`review failed: ${res.error}`);
+  if (!res.ok) {
+    out(res.summary);
+    fail(`review failed: ${res.error}`);
+  }
   out(res.text);
+  out(res.summary);
 }
 
 // ---- status / result / cancel ----------------------------------------------
@@ -197,6 +221,7 @@ function cmdResult(args) {
   if (j.status === "running" || j.status === "queued") { out(`job ${j.id} still ${j.status}`); return; }
   if (j.error) out(`job ${j.id} ${j.status} — error: ${j.error}`);
   out(j.resultText || "(no output captured)");
+  if (j.summary) out(j.summary);
 }
 
 function cmdCancel(args) {
@@ -206,17 +231,38 @@ function cmdCancel(args) {
   out(`job ${j.id}: ${j.status}`);
 }
 
+// ---- ask -------------------------------------------------------------------
+
+async function cmdAsk(args) {
+  const { values, positionals } = parseArgs({
+    args,
+    options: {
+      file: { type: "string", multiple: true },
+      live: { type: "boolean", default: false },
+      model: { type: "string", default: DEFAULT_ASK_MODEL }
+    },
+    allowPositionals: true
+  });
+  const prompt = positionals.join(" ").trim();
+  if (!prompt) fail("usage: ask \"<question>\" [--file path]... [--live] [--model m]");
+  const res = await askGemini({ prompt, files: values.file || [], live: values.live, model: values.model });
+  out(res.text);
+  out(res.cost);
+}
+
 // ---- image ------------------------------------------------------------------
 
 async function cmdImage(args) {
   const { values, positionals } = parseArgs({
     args,
-    options: { model: { type: "string", default: DEFAULT_IMAGE_MODEL }, out: { type: "string" } },
+    options: { model: { type: "string" }, hq: { type: "boolean", default: false }, out: { type: "string" } },
     allowPositionals: true
   });
   const prompt = positionals.join(" ").trim();
-  if (!prompt) fail("usage: image \"<prompt>\" [--model m] [--out file.png]");
-  const res = await generateImage({ prompt, model: values.model, out: values.out });
+  if (!prompt) fail("usage: image \"<prompt>\" [--model m | --hq] [--out file.png]");
+  const model = resolveImageModel({ model: values.model, hq: values.hq });
+  if (values.hq) out("gemini-3-pro-image: ~$0.134 per image (no free tier)");
+  const res = await generateImage({ prompt, model, out: values.out });
   out(`image written: ${res.file}`);
   if (res.text) out(`model notes: ${res.text.slice(0, 500)}`);
 }
@@ -232,6 +278,7 @@ const commands = {
   status: cmdStatus,
   result: cmdResult,
   cancel: cmdCancel,
+  ask: cmdAsk,
   image: cmdImage
 };
 

@@ -61,6 +61,7 @@ Then verify the CLI and key are visible:
 
 ```
 /gemini-companion:imagine --out fox.png a watercolor fox
+/gemini-companion:ask "What does this function do?" --file scripts/lib/gemini.mjs
 /gemini-companion:review                       # Gemini reviews your working diff
 /gemini-companion:rescue why does tests/jobs.test.mjs flake on CI?
 ```
@@ -77,7 +78,8 @@ Then verify the CLI and key are visible:
 | `/gemini-companion:result` | Fetch a finished job's output |
 | `/gemini-companion:cancel` | Kill a running background job |
 | `/gemini-companion:transfer` | Summarize current Claude session into a Gemini task (context handoff) |
-| `/gemini-companion:imagine` | Generate an image (`--model`, `--out file.png`); default `gemini-2.5-flash-image` |
+| `/gemini-companion:ask` | Single-turn REST question (`--file`, `--live`, `--model`); default `gemini-3.7-flash` |
+| `/gemini-companion:imagine` | Generate an image (`--model` or `--hq`, `--out file.png`); default `gemini-2.5-flash-image` |
 
 Long jobs: add `--background` to `rescue`, then poll with `/gemini-companion:status`, collect with `/gemini-companion:result --id <job-id>`, abandon with `/gemini-companion:cancel --id <job-id>`.
 
@@ -86,17 +88,19 @@ Long jobs: add `--background` to `rescue`, then poll with `/gemini-companion:sta
 Text and review runs spawn the Gemini CLI, which owns model routing. `--model` passes
 through, but the CLI **silently substitutes** a model it knows when handed one it does
 not — no error, the run just executes on the fallback (verified on CLI 0.55.1:
-`-m gemini-3.7-flash` served `gemini-3.5-flash`). `imagine` hits the REST API directly
-and can reach any served model. Prices are standard-tier USD per 1M tokens unless noted
+`-m gemini-3.7-flash` served `gemini-3.5-flash`). The runner prints the model actually
+served, token counts, estimated cost, and a warning on substitution. `ask` and `imagine`
+hit the REST API directly and can reach any served model. Prices are standard-tier USD per 1M tokens unless noted
 ([official pricing](https://ai.google.dev/gemini-api/docs/pricing)).
 
 | Job | Model | Cost | Capability |
 |---|---|---|---|
 | `rescue`, `review`, `adversarial-review`, `transfer` | Gemini CLI default (currently `gemini-3.5-flash`) | $1.50 in / $9.00 out; free tier | Agentic CLI run with tool use; `--write` lets it edit files |
 | CLI internal utility routing | `gemini-3.1-flash-lite` | $0.25 in / $1.50 out; free tier | Prompt classification and routing, picked by the CLI itself |
+| `ask` (default) | `gemini-3.7-flash` | $0.75 in / $3.75 out through 2026 (doubles Jan 2027); free tier | Single-turn REST request with optional files or Google Search grounding; live output is marked untrusted |
 | `imagine` (default) | `gemini-2.5-flash-image` | $0.039 per image; no free tier | Fast image generation and editing, up to 1024x1024 |
-| `imagine --model gemini-3-pro-image` | Nano Banana Pro (GA) | $0.134 per 1K/2K image, $0.24 per 4K; no free tier | Highest-quality image generation |
-| not reachable yet | `gemini-3.7-flash` | $0.75 in / $3.75 out through 2026 (doubles Jan 2027); free tier | GA 2026-08-13, best coding/agentic Flash at half the 3.5-flash price. REST serves it; Gemini CLI through 0.55.1 does not, so text jobs cannot use it until Google ships CLI support |
+| `imagine --hq` | Nano Banana Pro (GA) | $0.134 per image; no free tier | Highest-quality image generation |
+| CLI text jobs, not reachable yet | `gemini-3.7-flash` | $0.75 in / $3.75 out through 2026 (doubles Jan 2027); free tier | GA 2026-08-13, best coding/agentic Flash at half the 3.5-flash price. REST serves it through `ask`; Gemini CLI through 0.55.1 does not |
 | out of scope | `gemini-omni-flash-preview` | ~$0.10 per second of video; no free tier | Conversational video generation/editing. Not in this plugin; video routes to [grok-companion](https://github.com/Gfriend997/grok-companion) |
 
 Unlike the [grok-companion](https://github.com/Gfriend997/grok-companion) sibling, this
@@ -107,7 +111,7 @@ which owns the default.
 
 - Text and review runs spawn your Gemini CLI, so its account quota and billing apply; the
   plugin adds exactly one CLI run per job, nothing in the background.
-- `imagine` makes one API call and returns one image per run.
+- `ask` and `imagine` each make one API call per run; `ask --live` enables Google Search grounding.
 - Every run has a timeout (default 20 min), so a hung call cannot burn quota indefinitely.
 
 ## Security model
@@ -125,7 +129,7 @@ which owns the default.
 node --test "tests/*.test.mjs"
 ```
 
-Live end-to-end (uses your key, makes real API calls): run `setup`, a foreground `task`, `review`, a `--background` task plus `status`/`result`/`cancel`, and `image` via `scripts/gemini-companion.mjs`.
+Live end-to-end (uses your key, makes real API calls): run `setup`, a foreground `task`, `review`, a `--background` task plus `status`/`result`/`cancel`, `ask`, and `image` via `scripts/gemini-companion.mjs`.
 
 The entry script's subcommands do not all share a name with the slash commands that call them: `rescue` → `task`, `imagine` → `image`. `adversarial-review` and `transfer` are `task` runs with a different prompt preset. Everything else matches.
 

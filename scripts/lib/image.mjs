@@ -6,8 +6,14 @@ import path from "node:path";
 // query parameter (query strings end up in server and proxy logs), never on disk.
 
 export const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";
+export const HQ_IMAGE_MODEL = "gemini-3-pro-image";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL_RE = /^[A-Za-z0-9._-]+$/;
+
+export function resolveImageModel({ model, hq = false } = {}) {
+  if (hq && model) throw new Error("--hq cannot be combined with --model");
+  return hq ? HQ_IMAGE_MODEL : (model || DEFAULT_IMAGE_MODEL);
+}
 
 export function parseImageResponse(body) {
   const parts = body?.candidates?.[0]?.content?.parts ?? [];
