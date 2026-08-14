@@ -79,9 +79,25 @@ Then verify the CLI and key are visible:
 | `/gemini-companion:transfer` | Summarize current Claude session into a Gemini task (context handoff) |
 | `/gemini-companion:imagine` | Generate an image (`--model`, `--out file.png`); default `gemini-2.5-flash-image` |
 
-Text and review runs use whatever model your Gemini CLI defaults to unless you pass `--model`. Image generation defaults to `gemini-2.5-flash-image`.
-
 Long jobs: add `--background` to `rescue`, then poll with `/gemini-companion:status`, collect with `/gemini-companion:result --id <job-id>`, abandon with `/gemini-companion:cancel --id <job-id>`.
+
+## Models
+
+| Path | Model | Notes |
+|---|---|---|
+| `rescue`, `review`, `adversarial-review`, `transfer` | your Gemini CLI default | `--model` overrides per run |
+| `imagine` | `gemini-2.5-flash-image` | `--model` overrides per run |
+
+Unlike the [grok-companion](https://github.com/Gfriend997/grok-companion) siblings, this
+plugin does not pick models per job type — text and review runs go through the Gemini CLI,
+which owns the default.
+
+## Cost guards
+
+- Text and review runs spawn your Gemini CLI, so its account quota and billing apply; the
+  plugin adds exactly one CLI run per job, nothing in the background.
+- `imagine` makes one API call and returns one image per run.
+- Every run has a timeout (default 20 min), so a hung call cannot burn quota indefinitely.
 
 ## Security model
 
