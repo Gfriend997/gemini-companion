@@ -7,10 +7,11 @@ import { spawn, spawnSync } from "node:child_process";
 
 const MODEL_RE = /^[A-Za-z0-9._-]+$/;
 const DEFAULT_TIMEOUT_MS = 20 * 60 * 1000;
-// prices per 1M tokens, standard tier, 2026-08-14
+// prices per 1M tokens, standard tier, 2026-09-22
 export const TOKEN_PRICES = {
   "gemini-3.5-flash": { input: 1.5, output: 9 },
   "gemini-3.7-flash": { input: 0.75, output: 3.75 },
+  "gemini-3.8-flash": { input: 0.75, output: 3.75 },
   "gemini-3.1-flash-lite": { input: 0.25, output: 1.5 }
 };
 

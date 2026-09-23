@@ -78,7 +78,7 @@ Then verify the CLI and key are visible:
 | `/gemini-companion:result` | Fetch a finished job's output |
 | `/gemini-companion:cancel` | Kill a running background job |
 | `/gemini-companion:transfer` | Summarize current Claude session into a Gemini task (context handoff) |
-| `/gemini-companion:ask` | Single-turn REST question (`--file`, `--live`, `--model`); default `gemini-3.7-flash` |
+| `/gemini-companion:ask` | Single-turn REST question (`--file`, `--live`, `--model`); default `gemini-3.8-flash` |
 | `/gemini-companion:imagine` | Generate an image (`--model` or `--hq`, `--out file.png`); default `gemini-2.5-flash-image` |
 
 Long jobs: add `--background` to `rescue`, then poll with `/gemini-companion:status`, collect with `/gemini-companion:result --id <job-id>`, abandon with `/gemini-companion:cancel --id <job-id>`.
@@ -97,7 +97,7 @@ hit the REST API directly and can reach any served model. Prices are standard-ti
 |---|---|---|---|
 | `rescue`, `review`, `adversarial-review`, `transfer` | Gemini CLI default (currently `gemini-3.5-flash`) | $1.50 in / $9.00 out; free tier | Agentic CLI run with tool use; `--write` lets it edit files |
 | CLI internal utility routing | `gemini-3.1-flash-lite` | $0.25 in / $1.50 out; free tier | Prompt classification and routing, picked by the CLI itself |
-| `ask` (default) | `gemini-3.7-flash` | $0.75 in / $3.75 out through 2026 (doubles Jan 2027); free tier | Single-turn REST request with optional files or Google Search grounding; live output is marked untrusted |
+| `ask` (default) | `gemini-3.8-flash` | $0.75 in / $3.75 out through 2026 (doubles Jan 2027); free tier | Single-turn REST request with optional files or Google Search grounding; live output is marked untrusted |
 | `imagine` (default) | `gemini-2.5-flash-image` | $0.039 per image; no free tier | Fast image generation and editing, up to 1024x1024 |
 | `imagine --hq` | Nano Banana Pro (GA) | $0.134 per image; no free tier | Highest-quality image generation |
 | CLI text jobs, not reachable yet | `gemini-3.7-flash` | $0.75 in / $3.75 out through 2026 (doubles Jan 2027); free tier | GA 2026-08-13, best coding/agentic Flash at half the 3.5-flash price. REST serves it through `ask`; Gemini CLI through 0.55.1 does not |

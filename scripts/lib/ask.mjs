@@ -4,7 +4,7 @@ import path from "node:path";
 import { scrub } from "./scrub.mjs";
 import { TOKEN_PRICES } from "./gemini.mjs";
 
-export const DEFAULT_ASK_MODEL = "gemini-3.7-flash";
+export const DEFAULT_ASK_MODEL = "gemini-3.8-flash";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL_RE = /^[A-Za-z0-9._-]+$/;
 const MAX_FILES = 5;
