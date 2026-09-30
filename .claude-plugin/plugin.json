@@ -1,6 +1,6 @@
 {
   "name": "gemini-companion",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Use Gemini from Claude Code: delegate tasks, run reviews, generate images. API key stays in the environment.",
   "author": {
     "name": "Gary Wong"
