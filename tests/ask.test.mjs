@@ -1,5 +1,6 @@
 import { after, test } from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -332,4 +333,13 @@ test("generateContent failure deletes every file, one failed delete does not sto
   );
   assert.deepEqual(stub.calls.filter((c) => c.method === "DELETE").map((c) => c.url.split("/").pop()), ["f1", "f2"]);
   assert.equal(warnings.filter((w) => /could not delete uploaded files\/f1/.test(w)).length, 1);
+});
+
+test("checks the canonical name so a Windows 8.3 alias cannot dodge the credential check", (t) => {
+  if (process.platform !== "win32") return t.skip("8.3 aliases are Windows-only");
+  const long = path.join(tmp, "mykeystore.txt");
+  fs.writeFileSync(long, "x");
+  const out = execFileSync("powershell", ["-NoProfile", "-Command", `(New-Object -ComObject Scripting.FileSystemObject).GetFile('${long}').ShortPath`], { encoding: "utf8" }).trim();
+  if (!out || path.basename(out).toLowerCase() === "mykeystore.txt") return t.skip("8.3 names disabled on this volume");
+  assert.throws(() => loadAttachments([out]), /credential-shaped/);
 });

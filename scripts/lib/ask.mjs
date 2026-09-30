@@ -97,7 +97,11 @@ export function loadAttachments(filePaths = []) {
   try {
     for (const file of filePaths) {
       validateAttachmentPath(file);
-      const ext = path.extname(file).toLowerCase();
+      // Check the canonical name too: a Windows 8.3 alias (ID_RSA~1.TXT) would otherwise dodge the name check.
+      let real;
+      try { real = fs.realpathSync.native(file); } catch { throw new Error(`attachment not found: ${file}`); }
+      validateAttachmentPath(real);
+      const ext = path.extname(real).toLowerCase();
       const media = MEDIA_TYPES[ext];
       if (!media && !IMAGE_EXTENSIONS.has(ext) && !TEXT_EXTENSIONS.has(ext)) throw new Error(`unsupported attachment type: ${file}`);
       const link = fs.lstatSync(file);
