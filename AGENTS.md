@@ -12,7 +12,7 @@ Claude Code plugin delegating work to Google Gemini. Read this before changing a
 | `prompts/` | Prompt templates (review, adversarial-review) and the session routing policy |
 | `hooks/hooks.json` | SessionStart: inject routing policy. Stop: optional review gate (off by default) |
 | `scripts/gemini-companion.mjs` | Single runtime entry, stdlib only |
-| `scripts/lib/` | `gemini.mjs` (CLI spawns), `jobs.mjs` (background job state), `image.mjs` (REST image gen), `scrub.mjs` (secret masking) |
+| `scripts/lib/` | `gemini.mjs` (CLI spawns), `jobs.mjs` (background job state), `image.mjs` (REST image gen), `ask.mjs` (REST ask incl. media upload), `scrub.mjs` (secret masking) |
 | `tests/` | `node --test` suites for image, jobs, scrub |
 | `docs/superpowers/` | Design specs and plans — the decision record |
 

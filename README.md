@@ -62,6 +62,7 @@ Then verify the CLI and key are visible:
 ```
 /gemini-companion:imagine --out fox.png a watercolor fox
 /gemini-companion:ask "What does this function do?" --file scripts/lib/gemini.mjs
+/gemini-companion:ask "Transcribe this" --file memo.mp3   # also PDF and video
 /gemini-companion:review                       # Gemini reviews your working diff
 /gemini-companion:rescue why does tests/jobs.test.mjs flake on CI?
 ```
@@ -112,6 +113,7 @@ which owns the default.
 - Text and review runs spawn your Gemini CLI, so its account quota and billing apply; the
   plugin adds exactly one CLI run per job, nothing in the background.
 - `ask` and `imagine` each make one API call per run; `ask --live` enables Google Search grounding.
+  `ask --file` with media over 15MB adds Files API calls per file (upload, status polls, delete).
 - Every run has a timeout (default 20 min), so a hung call cannot burn quota indefinitely.
 
 ## Security model
@@ -120,6 +122,8 @@ which owns the default.
 - Prompts travel to the CLI over stdin, not argv (argv is visible in the process list).
 - Everything written to job state or logs passes a scrubber (`AIza…` pattern, labeled tokens, and the live env key value).
 - Job state lives outside any repo: `%LOCALAPPDATA%\gemini-companion\` on Windows, `~/.local/share/gemini-companion/` elsewhere.
+- `ask --file` media (PDF up to 50MB, audio/video up to 2GB, max 5 files) is type-checked by magic bytes from the same open handle it is sent from; symlinks are refused. Over 15MB it is streamed to the Gemini Files API: the upload URL must be `https://generativelanguage.googleapis.com` (never redirected, the key is not sent to it), and uploads are deleted after the answer, on error, or on Ctrl+C. Cleanup is best-effort; Google auto-expires uploads after 48h as the backstop.
+- Media is sent to Google: on the free tier Google may use it to improve its products, and `ask` prints a note saying so. Do not send private or client media.
 - Gemini output is treated as untrusted: commands relay it verbatim and never auto-execute its suggestions.
 - Headless runs set `GEMINI_CLI_TRUST_WORKSPACE=true` for the repo you invoked them in — invoking the command on your repo is the trust decision. `--write` runs use yolo approval; without it, tool calls needing approval fail closed.
 
