@@ -239,13 +239,14 @@ async function cmdAsk(args) {
     options: {
       file: { type: "string", multiple: true },
       live: { type: "boolean", default: false },
-      model: { type: "string", default: DEFAULT_ASK_MODEL }
+      model: { type: "string", default: DEFAULT_ASK_MODEL },
+      thinking: { type: "string" }
     },
     allowPositionals: true
   });
   const prompt = positionals.join(" ").trim();
-  if (!prompt) fail("usage: ask \"<question>\" [--file path]... [--live] [--model m]");
-  const res = await askGemini({ prompt, files: values.file || [], live: values.live, model: values.model });
+  if (!prompt) fail("usage: ask \"<question>\" [--file path]... [--live] [--model m] [--thinking level]");
+  const res = await askGemini({ prompt, files: values.file || [], live: values.live, model: values.model, thinking: values.thinking });
   out(res.text);
   out(res.cost);
 }

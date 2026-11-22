@@ -43,3 +43,8 @@ test("parses JSON output despite trailing non-JSON text", () => {
   const output = 'Warning: something\n{"response":"pong","stats":null}\nSession saved.';
   assert.equal(parseGeminiOutput(output).text, "pong");
 });
+
+test("prices Gemini 4 models instead of n/a", () => {
+  const stats = { models: { "gemini-4-hydrogen": { tokens: { input: 1_000_000, candidates: 1_000_000 }, roles: { main: {} } } } };
+  assert.match(summarizeGeminiRun({ stats }), /estimated cost \$9\.000/);
+});

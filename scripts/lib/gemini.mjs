@@ -7,12 +7,19 @@ import { spawn, spawnSync } from "node:child_process";
 
 const MODEL_RE = /^[A-Za-z0-9._-]+$/;
 const DEFAULT_TIMEOUT_MS = 20 * 60 * 1000;
-// prices per 1M tokens, standard tier, 2026-09-22
+// prices per 1M tokens, standard tier, from ai.google.dev pricing on 2026-11-22.
+// shortcut: dated prices, not fetched live. 3.8/3.6 Flash rise to 1.5/7.5 on 2027-01-01; Carbon/Argon rise to 4/20 on 2026-12-01. Update then.
 export const TOKEN_PRICES = {
-  "gemini-3.5-flash": { input: 1.5, output: 9 },
-  "gemini-3.7-flash": { input: 0.75, output: 3.75 },
+  "gemini-3.5-flash": { input: 1.5, output: 9 }, // routes to gemini-3.6-flash since 2026-10-08
+  "gemini-3.7-flash": { input: 0.75, output: 3.75 }, // routes to gemini-3.8-flash since 2026-10-08
   "gemini-3.8-flash": { input: 0.75, output: 3.75 },
-  "gemini-3.1-flash-lite": { input: 0.25, output: 1.5 }
+  "gemini-3.6-flash": { input: 0.75, output: 3.75 },
+  "gemini-3.5-flash-lite": { input: 0.3, output: 2.5 },
+  "gemini-3.1-flash-lite": { input: 0.25, output: 1.5 },
+  "gemini-4-hydrogen": { input: 1.5, output: 7.5 },
+  "gemini-4-neon": { input: 3, output: 15 },
+  "gemini-4-carbon": { input: 2, output: 10 },
+  "gemini-4-argon": { input: 2, output: 10 }
 };
 
 export function geminiBinary() {
