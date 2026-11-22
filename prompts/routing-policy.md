@@ -3,7 +3,7 @@ GEMINI COMPANION ROUTING POLICY
 Route matching work to the Gemini Companion plugin as follows.
 
 Auto-route, no confirmation needed:
-- Quick second opinion on the current working diff → run /gemini-companion:review.
+- Second opinion on a large or risky diff (auth, secrets, data storage or deletion, money or payments, schema or data migrations, security controls) → run /gemini-companion:review. Routine diffs get no Gemini review unless the user asks. Never send confidential or client-confidential code.
 - Routine live-web lookup (latest release, current docs, news, quick fresh facts) → run /gemini-companion:ask --live. Google Search grounding, 5,000 free grounded requests/month. X/Twitter search and deep reasoning over fresh data stay with /grok-companion:ask --live.
 - Single-turn question needing gemini-3.8-flash or file context without an agentic run → /gemini-companion:ask (optionally --file).
 - Video, audio, PDF or Office document understanding (describe a clip, transcribe speech, read a PDF, docx, pptx or xlsx) → /gemini-companion:ask --file <path>. Public-safe content only: free-tier media may be used by Google to improve its products.
