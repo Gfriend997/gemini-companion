@@ -5,7 +5,7 @@ import path from "node:path";
 // environment at call time and sent only as a request header — never as a
 // query parameter (query strings end up in server and proxy logs), never on disk.
 
-export const DEFAULT_IMAGE_MODEL = "gemini-2.5-flash-image";
+export const DEFAULT_IMAGE_MODEL = "gemini-nano-banana-2.1";
 export const HQ_IMAGE_MODEL = "gemini-3-pro-image";
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta";
 const MODEL_RE = /^[A-Za-z0-9._-]+$/;
@@ -26,6 +26,11 @@ export function parseImageResponse(body) {
   return { data: Buffer.from(image.inlineData.data, "base64"), mimeType: image.inlineData.mimeType || "image/png", text };
 }
 
+// store:false opts out of AI Studio request logging (on by default for paid projects since 2026-10-26).
+export function buildImageRequest(prompt) {
+  return { contents: [{ parts: [{ text: prompt }] }], store: false };
+}
+
 export async function generateImage({ prompt, model = DEFAULT_IMAGE_MODEL, out }) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
@@ -38,7 +43,7 @@ export async function generateImage({ prompt, model = DEFAULT_IMAGE_MODEL, out }
   const res = await fetch(`${API_BASE}/models/${model}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    body: JSON.stringify(buildImageRequest(prompt))
   });
   if (!res.ok) {
     const errText = (await res.text()).slice(0, 1000);

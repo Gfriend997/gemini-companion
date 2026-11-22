@@ -33,6 +33,11 @@ const ascii = (buf, offset, str) => buf.subarray(offset, offset + str.length).to
 const ftyp = (b) => ascii(b, 4, "ftyp");
 const riff = (form) => (b) => ascii(b, 0, "RIFF") && ascii(b, 8, form);
 const ogg = (b) => ascii(b, 0, "OggS");
+const zip = (b) => b[0] === 0x50 && b[1] === 0x4b && b[2] === 0x03 && b[3] === 0x04;
+const ole = (b) => b.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]));
+const MAX_OFFICE_BYTES = 50 * MB;
+const office = (mimeType, magic) => ({ mimeType, max: MAX_OFFICE_BYTES, magic });
+export const THINKING_LEVELS = ["minimal", "low", "medium", "high", "xhigh"];
 const mpegPs = (b) => b[0] === 0 && b[1] === 0 && b[2] === 1 && (b[3] === 0xba || b[3] === 0xb3);
 const MEDIA_TYPES = {
   ".pdf": { mimeType: "application/pdf", max: MAX_PDF_BYTES, magic: (b) => ascii(b, 0, "%PDF-") },
@@ -49,7 +54,18 @@ const MEDIA_TYPES = {
   ".aac": { mimeType: "audio/aac", max: MAX_AV_BYTES, magic: (b) => b[0] === 0xff && (b[1] === 0xf1 || b[1] === 0xf9) },
   ".ogg": { mimeType: "audio/ogg", max: MAX_AV_BYTES, magic: ogg },
   ".opus": { mimeType: "audio/opus", max: MAX_AV_BYTES, magic: ogg },
-  ".flac": { mimeType: "audio/flac", max: MAX_AV_BYTES, magic: (b) => ascii(b, 0, "fLaC") }
+  ".flac": { mimeType: "audio/flac", max: MAX_AV_BYTES, magic: (b) => ascii(b, 0, "fLaC") },
+  // Office/OpenDocument input, GA 2026-11-18. MIME strings from the document-processing docs page.
+  ".docx": office("application/vnd.openxmlformats-officedocument.wordprocessingml.document", zip),
+  ".dotx": office("application/vnd.openxmlformats-officedocument.wordprocessingml.template", zip),
+  ".pptx": office("application/vnd.openxmlformats-officedocument.presentationml.presentation", zip),
+  ".xlsx": office("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", zip),
+  ".odt": office("application/vnd.oasis.opendocument.text", zip),
+  ".odp": office("application/vnd.oasis.opendocument.presentation", zip),
+  ".ods": office("application/vnd.oasis.opendocument.spreadsheet", zip),
+  ".doc": office("application/msword", ole),
+  ".ppt": office("application/vnd.ms-powerpoint", ole),
+  ".xls": office("application/vnd.ms-excel", ole)
 };
 
 function secretShaped(value) {
@@ -143,7 +159,14 @@ export function loadAttachments(filePaths = []) {
   return loaded;
 }
 
-export function buildAskRequest({ prompt, attachments = [], live = false } = {}) {
+export function validateThinking(thinking) {
+  if (thinking !== undefined && thinking !== null && !THINKING_LEVELS.includes(thinking)) {
+    throw new Error(`--thinking must be one of ${THINKING_LEVELS.join(", ")}`);
+  }
+}
+
+export function buildAskRequest({ prompt, attachments = [], live = false, thinking } = {}) {
+  validateThinking(thinking);
   if (secretShaped(prompt)) throw new Error("refusing secret-shaped prompt");
   const parts = [{ text: prompt }];
   for (const attachment of attachments) {
@@ -151,8 +174,10 @@ export function buildAskRequest({ prompt, attachments = [], live = false } = {})
     else if (attachment.inlineData) parts.push({ inlineData: attachment.inlineData });
     else if (attachment.fileData) parts.push({ fileData: attachment.fileData });
   }
-  const body = { contents: [{ parts }] };
+  // store:false opts out of AI Studio request logging (on by default for paid projects since 2026-10-26).
+  const body = { contents: [{ parts }], store: false };
   if (live) body.tools = [{ google_search: {} }];
+  if (thinking) body.generationConfig = { thinkingConfig: { thinkingLevel: thinking } };
   return body;
 }
 
@@ -307,11 +332,12 @@ export function summarizeAskCost({ model, usageMetadata } = {}) {
 }
 
 // overrides (fetch, sleep, now, warn, inlineLimit) exist for tests.
-export async function askGemini({ prompt, files = [], live = false, model = DEFAULT_ASK_MODEL } = {}, overrides = {}) {
+export async function askGemini({ prompt, files = [], live = false, model = DEFAULT_ASK_MODEL, thinking } = {}, overrides = {}) {
   const deps = { ...DEFAULT_DEPS, ...overrides };
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new Error("GEMINI_API_KEY not set in the environment. Export it as an OS-level environment variable and restart Claude Code — never a .env file.");
   if (!MODEL_RE.test(model)) throw new Error(`invalid model name: ${model}`);
+  validateThinking(thinking);
   if (secretShaped(prompt)) throw new Error("refusing secret-shaped prompt");
   const attachments = loadAttachments(files);
   const uploaded = [];
@@ -341,7 +367,7 @@ export async function askGemini({ prompt, files = [], live = false, model = DEFA
       method: "POST",
       headers: { "Content-Type": "application/json", "x-goog-api-key": key },
       signal: AbortSignal.timeout(GENERATE_TIMEOUT_MS),
-      body: JSON.stringify(buildAskRequest({ prompt, attachments: parts, live }))
+      body: JSON.stringify(buildAskRequest({ prompt, attachments: parts, live, thinking }))
     });
     if (!res.ok) throw new Error(`Gemini API ${res.status}: ${scrub((await res.text()).slice(0, 1000))}`);
     const response = await res.json();

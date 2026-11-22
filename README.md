@@ -79,8 +79,8 @@ Then verify the CLI and key are visible:
 | `/gemini-companion:result` | Fetch a finished job's output |
 | `/gemini-companion:cancel` | Kill a running background job |
 | `/gemini-companion:transfer` | Summarize current Claude session into a Gemini task (context handoff) |
-| `/gemini-companion:ask` | Single-turn REST question (`--file`, `--live`, `--model`); default `gemini-3.8-flash` |
-| `/gemini-companion:imagine` | Generate an image (`--model` or `--hq`, `--out file.png`); default `gemini-2.5-flash-image` |
+| `/gemini-companion:ask` | Single-turn REST question (`--file`, `--live`, `--model`, `--thinking`); default `gemini-3.8-flash` |
+| `/gemini-companion:imagine` | Generate an image (`--model` or `--hq`, `--out file.png`); default `gemini-nano-banana-2.1` |
 
 Long jobs: add `--background` to `rescue`, then poll with `/gemini-companion:status`, collect with `/gemini-companion:result --id <job-id>`, abandon with `/gemini-companion:cancel --id <job-id>`.
 
@@ -99,7 +99,7 @@ hit the REST API directly and can reach any served model. Prices are standard-ti
 | `rescue`, `review`, `adversarial-review`, `transfer` | Gemini CLI default (currently `gemini-3.5-flash`) | $1.50 in / $9.00 out; free tier | Agentic CLI run with tool use; `--write` lets it edit files |
 | CLI internal utility routing | `gemini-3.1-flash-lite` | $0.25 in / $1.50 out; free tier | Prompt classification and routing, picked by the CLI itself |
 | `ask` (default) | `gemini-3.8-flash` | $0.75 in / $3.75 out through 2026 (doubles Jan 2027); free tier | Single-turn REST request with optional files or Google Search grounding; live output is marked untrusted |
-| `imagine` (default) | `gemini-2.5-flash-image` | $0.039 per image; no free tier | Fast image generation and editing, up to 1024x1024 |
+| `imagine` (default) | `gemini-nano-banana-2.1` | $30 per 1M image output tokens; no free tier | Google's recommended default image model (`gemini-2.5-flash-image` shuts down 2027-03-15) |
 | `imagine --hq` | Nano Banana Pro (GA) | $0.134 per image; no free tier | Highest-quality image generation |
 | CLI text jobs, not reachable yet | `gemini-3.7-flash` | $0.75 in / $3.75 out through 2026 (doubles Jan 2027); free tier | GA 2026-08-13, best coding/agentic Flash at half the 3.5-flash price. REST serves it through `ask`; Gemini CLI through 0.55.1 does not |
 | out of scope | `gemini-omni-flash-preview` | ~$0.10 per second of video; no free tier | Conversational video generation/editing. Not in this plugin; video routes to [grok-companion](https://github.com/Gfriend997/grok-companion) |
@@ -113,6 +113,9 @@ which owns the default.
 - Text and review runs spawn your Gemini CLI, so its account quota and billing apply; the
   plugin adds exactly one CLI run per job, nothing in the background.
 - `ask` and `imagine` each make one API call per run; `ask --live` enables Google Search grounding.
+- `ask --thinking minimal|low|medium|high|xhigh` sets the thinking level. Supported levels vary by model (`gemini-3.8-flash`: low/medium/high; `gemini-4-hydrogen`: low/medium/high/xhigh); the API rejects unsupported ones.
+- `ask` and `imagine` send `store: false`, opting out of AI Studio request logging (on by default for paid projects created since 2026-10-26).
+- Model reroutes: `gemini-3.7-flash` serves `gemini-3.8-flash` and `gemini-3.5-flash` serves `gemini-3.6-flash` (since 2026-10-08); `gemini-2.5-pro` and `gemini-2.5-flash` reroute on 2026-12-01.
   `ask --file` with media over 15MB adds Files API calls per file (upload, status polls, delete).
 - Every run has a timeout (default 20 min), so a hung call cannot burn quota indefinitely.
 
@@ -122,7 +125,7 @@ which owns the default.
 - Prompts travel to the CLI over stdin, not argv (argv is visible in the process list).
 - Everything written to job state or logs passes a scrubber (`AIza…` pattern, labeled tokens, and the live env key value).
 - Job state lives outside any repo: `%LOCALAPPDATA%\gemini-companion\` on Windows, `~/.local/share/gemini-companion/` elsewhere.
-- `ask --file` media (PDF up to 50MB, audio/video up to 2GB, max 5 files) is type-checked by magic bytes from the same open handle it is sent from; symlinks are refused. Over 15MB it is streamed to the Gemini Files API: the upload URL must be `https://generativelanguage.googleapis.com` (never redirected, the key is not sent to it), and uploads are deleted after the answer, on error, or on Ctrl+C. Cleanup is best-effort; Google auto-expires uploads after 48h as the backstop.
+- `ask --file` media (PDF and Office/OpenDocument files docx/dotx/odt/pptx/xlsx/xls/doc/ppt/odp/ods up to 50MB each, audio/video up to 2GB, max 5 files) is type-checked by magic bytes from the same open handle it is sent from; symlinks are refused. Over 15MB it is streamed to the Gemini Files API: the upload URL must be `https://generativelanguage.googleapis.com` (never redirected, the key is not sent to it), and uploads are deleted after the answer, on error, or on Ctrl+C. Cleanup is best-effort; Google auto-expires uploads after 48h as the backstop.
 - Media is sent to Google: on the free tier Google may use it to improve its products, and `ask` prints a note saying so. Do not send private or client media.
 - Gemini output is treated as untrusted: commands relay it verbatim and never auto-execute its suggestions.
 - Headless runs set `GEMINI_CLI_TRUST_WORKSPACE=true` for the repo you invoked them in — invoking the command on your repo is the trust decision. `--write` runs use yolo approval; without it, tool calls needing approval fail closed.

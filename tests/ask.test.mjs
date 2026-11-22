@@ -36,8 +36,48 @@ test("builds a REST request with text and image attachments plus live search", (
       { text: "File: notes.md\n\nnotes" },
       { inlineData: { mimeType: "image/png", data: "aW1hZ2U=" } }
     ] }],
+    store: false,
     tools: [{ google_search: {} }]
   });
+});
+
+test("opts out of request storage and sets thinking level only when asked", () => {
+  assert.equal(buildAskRequest({ prompt: "hi" }).store, false);
+  assert.equal(buildAskRequest({ prompt: "hi" }).generationConfig, undefined);
+  assert.deepEqual(buildAskRequest({ prompt: "hi", thinking: "xhigh" }).generationConfig, { thinkingConfig: { thinkingLevel: "xhigh" } });
+  assert.throws(() => buildAskRequest({ prompt: "hi", thinking: "bogus" }), /--thinking must be one of/);
+});
+
+test("rejects an invalid thinking level before any network call", async () => {
+  const saved = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "test-key-not-real";
+  let called = false;
+  try {
+    await assert.rejects(
+      askGemini({ prompt: "hi", thinking: "LOW" }, { fetch: async () => { called = true; } }),
+      /--thinking must be one of/
+    );
+  } finally {
+    if (saved === undefined) delete process.env.GEMINI_API_KEY; else process.env.GEMINI_API_KEY = saved;
+  }
+  assert.equal(called, false);
+});
+
+test("accepts Office files by ZIP or OLE magic and rejects disguised ones", () => {
+  const docx = path.join(tmp, "report.docx");
+  const xls = path.join(tmp, "sheet.xls");
+  const fake = path.join(tmp, "fake.pptx");
+  fs.writeFileSync(docx, Buffer.concat([Buffer.from([0x50, 0x4b, 0x03, 0x04]), Buffer.alloc(16)]));
+  fs.writeFileSync(xls, Buffer.concat([Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]), Buffer.alloc(16)]));
+  fs.writeFileSync(fake, "plain text pretending to be a deck");
+  const loaded = loadAttachments([docx, xls]);
+  try {
+    assert.equal(loaded[0].media.mimeType, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    assert.equal(loaded[1].media.mimeType, "application/vnd.ms-excel");
+  } finally {
+    closeAttachments(loaded);
+  }
+  assert.throws(() => loadAttachments([fake]), /magic bytes/);
 });
 
 test("loads text files and validates image magic bytes", () => {
